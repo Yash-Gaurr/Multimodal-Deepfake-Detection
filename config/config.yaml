@@ -1,0 +1,70 @@
+# ==============================================================================
+# Multimodal Deepfake Detection - Configuration
+# ==============================================================================
+
+project:
+  name: "Multimodal-Deepfake-Detection"
+  version: "1.0.0"
+  description: "Audio-Visual Deepfake Detection with Cross-Modal Inconsistency Modeling"
+  random_seed: 42
+
+paths:
+  data_dir: "data"
+  raw_data_dir: "data/raw"
+  processed_data_dir: "data/processed"
+  checkpoints_dir: "checkpoints"
+  logs_dir: "logs"
+  sample_videos_dir: "data/sample_data"
+
+preprocessing:
+  video:
+    target_fps: 25
+    num_frames: 32           # Frames per temporal segment
+    face_crop_size: 224      # Resolution (H x W) for face detector crop
+    lip_crop_size: 96        # Resolution for lip ROI crop
+    face_detection_confidence: 0.5
+  audio:
+    sample_rate: 16000       # Target 16kHz mono audio
+    duration_seconds: 3.2    # Matches 32 frames at 10 fps or 25 fps window
+    n_fft: 1024
+    hop_length: 512
+    n_mels: 80               # Mel-frequency filterbanks
+    f_min: 0.0
+    f_max: 8000.0
+
+models:
+  visual_net:
+    backbone: "resnet18"     # Lightweight 2D/3D CNN backbone
+    pretrained: true
+    embedding_dim: 256
+    dropout: 0.3
+  
+  audio_net:
+    backbone: "resnet18_1d"  # Or 2D CNN over spectrogram
+    pretrained: false
+    embedding_dim: 256
+    dropout: 0.3
+
+  multimodal_fusion:
+    fusion_type: "cross_attention"  # Options: 'cross_attention', 'concat_late', 'bilinear'
+    hidden_dim: 256
+    num_heads: 4
+    num_layers: 2
+    dropout: 0.3
+    num_classes: 2           # Binary: 0=Real, 1=Fake
+
+training:
+  batch_size: 8              # Tuned for RTX 3050 (4GB VRAM)
+  num_workers: 0             # Set to 0 on Windows to prevent multiprocessing spawn bottlenecks
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  epochs: 15
+  early_stopping_patience: 4
+  device: "cuda"             # Automatically falls back to 'cpu' if cuda is unavailable
+  mixed_precision: true      # FP16 AMP for speed and memory efficiency on RTX 3050
+  label_smoothing: 0.05
+
+inference:
+  fake_threshold: 0.50
+  confidence_calibration: true
+  enable_temporal_breakdown: true
